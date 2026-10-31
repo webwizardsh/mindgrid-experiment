@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindGrid: Working Memory Challenge</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Fullscreen Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Hidden File Input for Data Import -->
+  <input type="file" id="file-import-data" accept=".json" style="display: none;">
+
+  <!-- Floating Toast Notification -->
+  <div id="toast-notice" class="toast-notice">Data imported successfully!</div>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-group">
+        <span class="logo-badge" style="font-size: 1.3rem; padding: 0.35rem 0.65rem;">🧠</span>
+        <div class="title-group">
+          <h1>MindGrid Memory Challenge</h1>
+          <p>Working Memory &amp; Cognitive Precision</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-fullscreen-toggle" class="btn-sound" title="Toggle Fullscreen Mode">
+          ⛶ Fullscreen
+        </button>
+        <button id="btn-sound-toggle" class="btn-sound" title="Toggle audio feedback">
+          🔊 Sound: ON
+        </button>
+        <button id="btn-header-import" class="btn btn-secondary btn-sm" style="padding: 0.45rem 0.85rem; font-size: 0.85rem;">
+          📥 Import Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- ================= SCREEN 1: SETUP & CONFIGURATION ================= -->
+    <section id="screen-setup" class="card">
+      <div class="card-header">
+        <h2 class="card-title">Memory Challenge Setup</h2>
+        <p class="card-subtitle">Test memory span, feature detection, and cognitive stamina across progressive levels</p>
+      </div>
+
+      <div class="info-callout" style="border-left-color: #6366f1; background: #f5f3ff;">
+        <h4 style="color: #4338ca;">How to Play</h4>
+        <p>You will memorize sets of words across 4 progressive difficulty levels. After memorizing each set, you'll see a series of probe words and decide how confident you are that each word was in your study list!</p>
+        <ul>
+          <li><strong>Confidence Rating Scale:</strong> Rate <em>1 (Definitely New)</em> to <em>6 (Definitely Old)</em>.</li>
+          <li><strong>Keyboard Shortcuts:</strong> Hit number keys <code>1</code> to <code>6</code> on your keyboard for lightning fast responses!</li>
+        </ul>
+      </div>
+
+      <div class="form-grid">
+        <!-- Subject ID -->
+        <div class="form-group">
+          <label class="form-label" for="input-subject">Player Name / Alias</label>
+          <input type="text" id="input-subject" class="form-input" placeholder="e.g., Alex / Friend_1" value="Friend_1">
+          <span class="form-helper">Name displayed on the Player Card</span>
+        </div>
+
+        <!-- Presentation Mode -->
+        <div class="form-group">
+          <label class="form-label" for="select-pres-mode">Presentation Style</label>
+          <select id="select-pres-mode" class="form-select">
+            <option value="sequential" selected>Sequential Flash (Word-by-word with timer)</option>
+            <option value="cloud">Word Cloud / Board (All words together)</option>
+          </select>
+          <span class="form-helper">Sequential flash tests immediate focus</span>
+        </div>
+
+        <!-- Word Duration -->
+        <div class="form-group">
+          <label class="form-label" for="select-word-duration">Word Flash Speed</label>
+          <select id="select-word-duration" class="form-select">
+            <option value="1000">1.0s (Fast &amp; Intense)</option>
+            <option value="1500" selected>1.5s (Standard Challenge)</option>
+            <option value="2000">2.0s (Relaxed)</option>
+            <option value="2500">2.5s (Casual)</option>
+          </select>
+          <span class="form-helper">Duration each word stays on screen</span>
+        </div>
+
+        <!-- Response Mode -->
+        <div class="form-group">
+          <label class="form-label" for="select-resp-mode">Scoring Mode</label>
+          <select id="select-resp-mode" class="form-select">
+            <option value="confidence" selected>6-Point Precision Scale (Recommended)</option>
+            <option value="binary">Binary (Yes / No)</option>
+          </select>
+          <span class="form-helper">6-point scale generates full precision curves</span>
+        </div>
+      </div>
+
+      <!-- Progressive Levels -->
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label class="form-label">Levels to Challenge (Working Memory Load)</label>
+        <span class="form-helper">Select set sizes to attempt:</span>
+        <div class="chips-container" style="margin-top: 0.6rem;">
+          <label class="chip-label active"><input type="checkbox" name="set-size" value="4" checked> Level 1: Warmup (4 Words)</label>
+          <label class="chip-label active"><input type="checkbox" name="set-size" value="8" checked> Level 2: Sprint (8 Words)</label>
+          <label class="chip-label active"><input type="checkbox" name="set-size" value="12" checked> Level 3: Crunch (12 Words)</label>
+          <label class="chip-label active"><input type="checkbox" name="set-size" value="16" checked> Level 4: Master (16 Words)</label>
+          <label class="chip-label"><input type="checkbox" name="set-size" value="20"> Level 5: Grandmaster (20 Words)</label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+        <button id="btn-start-exp" class="btn btn-primary btn-lg">
+          🎮 Start Challenge
+        </button>
+        <button id="btn-simulate" class="btn btn-demo btn-lg">
+          ⚡ Instant Demo (Simulated Run)
+        </button>
+        <button id="btn-setup-import" class="btn btn-import btn-lg">
+          📥 Import Complete Data
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 2: STUDY / MEMORIZATION ================= -->
+    <section id="screen-study" class="card" style="display: none;">
+      <div class="experiment-stage">
+        <div class="stage-header">
+          <span id="study-block-badge" class="stage-badge">Level 1 &bull; Memorize</span>
+          <span id="study-progress-text" class="stage-progress">Word 1 of 4</span>
+        </div>
+
+        <div class="stimulus-display">
+          <p style="font-size: 1.15rem; color: #6366f1; margin-bottom: 0.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Lock this word in memory:</p>
+          <div id="study-word-display" class="big-stimulus-word">Butter</div>
+
+          <div class="timer-bar-container">
+            <div id="study-timer-bar" class="timer-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Word Cloud Display -->
+        <div id="study-cloud-container" class="word-cloud-container" style="display: none;"></div>
+        <button id="btn-cloud-ready" class="btn btn-primary btn-lg" style="display: none; margin-top: 1.5rem;">
+          I Have Memorized All Words &rarr; Ready
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 3: RETENTION DELAY ================= -->
+    <section id="screen-retention" class="card" style="display: none;">
+      <div class="experiment-stage">
+        <div class="fixation-cross">+</div>
+        <p style="font-size: 1.2rem; color: #475569; margin-top: 1.5rem; font-weight: 600;">
+          Focus... Get ready for the recognition test!
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 4: TEST / RECOGNITION ================= -->
+    <section id="screen-test" class="card" style="display: none;">
+      <div class="experiment-stage">
+        <div class="stage-header">
+          <span id="test-block-badge" class="stage-badge">Level 1 &bull; Recognition Test</span>
+          <span id="test-progress-text" class="stage-progress">Probe 1 of 8</span>
+        </div>
+
+        <!-- Dynamic Streak Banner -->
+        <div id="streak-banner" class="streak-badge" style="display: none;">🔥 3 Streak!</div>
+
+        <div class="stimulus-display">
+          <p style="font-size: 1.15rem; color: #475569; margin-bottom: 0.5rem; font-weight: 600;">Did you see this word in the memorized list?</p>
+          <div id="test-probe-word" class="big-stimulus-word">Stone</div>
+        </div>
+
+        <div class="response-container">
+          <!-- 6-Point Confidence Rating Scale -->
+          <div id="rating-scale-grid" class="rating-scale-grid">
+            <button class="rating-btn r-1" data-rating="1">
+              <span class="rating-num">1</span>
+              <span class="rating-title">Definitely New</span>
+              <span class="rating-key">Key 1</span>
+            </button>
+            <button class="rating-btn r-2" data-rating="2">
+              <span class="rating-num">2</span>
+              <span class="rating-title">Probably New</span>
+              <span class="rating-key">Key 2</span>
+            </button>
+            <button class="rating-btn r-3" data-rating="3">
+              <span class="rating-num">3</span>
+              <span class="rating-title">Guess New</span>
+              <span class="rating-key">Key 3</span>
+            </button>
+            <button class="rating-btn r-4" data-rating="4">
+              <span class="rating-num">4</span>
+              <span class="rating-title">Guess Old</span>
+              <span class="rating-key">Key 4</span>
+            </button>
+            <button class="rating-btn r-5" data-rating="5">
+              <span class="rating-num">5</span>
+              <span class="rating-title">Probably Old</span>
+              <span class="rating-key">Key 5</span>
+            </button>
+            <button class="rating-btn r-6" data-rating="6">
+              <span class="rating-num">6</span>
+              <span class="rating-title">Definitely Old</span>
+              <span class="rating-key">Key 6</span>
+            </button>
+          </div>
+
+          <!-- Binary Yes/No Buttons -->
+          <div id="binary-btns-grid" class="binary-btns-grid" style="display: none;">
+            <button id="btn-resp-no" class="binary-btn btn-no">
+              <span>NO (New Word)</span>
+              <span class="key-badge">Press [N]</span>
+            </button>
+            <button id="btn-resp-yes" class="binary-btn btn-yes">
+              <span>YES (Old Word)</span>
+              <span class="key-badge">Press [Y]</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 5: LEVEL CLEARED / BLOCK BREAK ================= -->
+    <section id="screen-block-break" class="card" style="display: none;">
+      <div class="experiment-stage">
+        <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🎉</div>
+        <h2 id="break-title" style="font-size: 2.2rem; color: #1e293b; margin-bottom: 0.5rem; font-weight: 800;">Level Cleared!</h2>
+        <p id="break-desc" style="font-size: 1.1rem; color: #64748b; max-width: 520px; margin-bottom: 2rem;">
+          Great focus! Take a breath before stepping up to the next difficulty level.
+        </p>
+        <button id="btn-next-block" class="btn btn-primary btn-lg">
+          Continue to Next Level &rarr;
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= SCREEN 6: RESULTS & PERFORMANCE DASHBOARD ================= -->
+    <section id="screen-results" style="display: none;">
+      
+      <!-- Gamified Player Hero Card -->
+      <div class="hero-player-card">
+        <div class="hero-info">
+          <div id="res-badge-tag" class="hero-badge-tag">🏆 Photographic Memory Master</div>
+          <h2 id="res-hero-player-name" class="hero-title">Alex's Cognitive Profile</h2>
+          <p id="res-hero-desc" class="hero-desc">
+            Outstanding feature discriminability with laser-sharp recognition accuracy across all memory loads!
+          </p>
+          <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap;">
+            <span id="res-decision-style-pill" style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700;">
+              ⚖️ Decision Style: Perfectly Balanced
+            </span>
+          </div>
+        </div>
+
+        <div class="hero-stats-badge">
+          <div id="res-brain-score" class="hero-score-val">920</div>
+          <div class="hero-score-label">Brain Power Score</div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="card" style="padding: 1.25rem 1.75rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="font-weight: 700; color: #1e293b; font-size: 1rem;">
+            Performance Data &amp; Controls
+          </div>
+          <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;" class="no-print">
+            <button id="btn-import-data" class="btn btn-import">
+              📥 Import Complete Data
+            </button>
+            <button id="btn-export-json" class="btn btn-export">
+              💾 Export Complete Data (JSON)
+            </button>
+            <button id="btn-download-csv" class="btn btn-secondary">
+              📊 Export CSV
+            </button>
+            <button id="btn-copy-sdt" class="btn btn-secondary" title="Copy raw SDT metrics table for assignment submission">
+              📋 Copy Data
+            </button>
+            <button id="btn-restart" class="btn btn-primary">
+              🔄 Play Again
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Core Metrics Row -->
+      <div class="metrics-row">
+        <div class="metric-tile">
+          <span class="metric-tile-title">Recognition Accuracy</span>
+          <span id="res-accuracy" class="metric-tile-value" style="color: #10b981;">--</span>
+          <span class="metric-tile-desc">Hits + Correct Rejections</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile-title">Sensitivity (d')</span>
+          <span id="res-mean-d" class="metric-tile-value" style="color: #4f46e5;">--</span>
+          <span class="metric-tile-desc">Target vs. Lure Discriminability</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile-title">Decision Bias (b)</span>
+          <span id="res-mean-b" class="metric-tile-value" style="color: #0ea5e9;">--</span>
+          <span class="metric-tile-desc">0 = Neutral, &gt;0 = Conservative</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile-title">Reaction Speed</span>
+          <span id="res-mean-rt" class="metric-tile-value" style="color: #f59e0b;">--</span>
+          <span class="metric-tile-desc">Average response latency</span>
+        </div>
+      </div>
+
+      <!-- Psychophysical Summary Table -->
+      <div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+        <h3 style="font-size: 1.15rem; color: #1e293b; margin-bottom: 0.75rem; font-weight: 700;">Level Performance Summary</h3>
+        <div class="table-responsive">
+          <table class="sdt-table">
+            <thead>
+              <tr>
+                <th>Level (Set Size)</th>
+                <th>Targets</th>
+                <th>Lures</th>
+                <th>Hits</th>
+                <th>Misses</th>
+                <th>False Alarms</th>
+                <th>Correct Rejections</th>
+                <th>Hit Rate (H)</th>
+                <th>FA Rate (F)</th>
+                <th>Sensitivity (d')</th>
+                <th>Criterion (c)</th>
+                <th>Bias (b)</th>
+                <th>Beta (&beta;)</th>
+                <th>Mean Speed</th>
+              </tr>
+            </thead>
+            <tbody id="sdt-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Visual Charts Grid -->
+      <div class="charts-grid-dual">
+        <!-- Chart 1: Psychophysical Function -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title">Memory Sensitivity vs. Set Size</h3>
+              <p class="card-subtitle">Sensitivity (d') across increasing cognitive load</p>
+            </div>
+            <span class="chart-badge">Psychophysical Curve</span>
+          </div>
+          <div id="chart-dprime-container" class="chart-container"></div>
+        </div>
+
+        <!-- Chart 2: Bias vs Set Size -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title">Decision Strategy vs. Set Size</h3>
+              <p class="card-subtitle">Bias (b) and absolute criterion (c) across levels</p>
+            </div>
+            <span class="chart-badge">Decision Style</span>
+          </div>
+          <div id="chart-bias-container" class="chart-container"></div>
+        </div>
+      </div>
+
+      <!-- Chart 3: ROC Space -->
+      <div class="chart-card" style="margin-bottom: 2.5rem;">
+        <div class="chart-header">
+          <div>
+            <h3 class="chart-title">Receiver Operating Characteristic (ROC) Space</h3>
+            <p class="card-subtitle">Confidence rating criteria points mapped against theoretical iso-sensitivity curves</p>
+          </div>
+          <span class="chart-badge">Precision ROC</span>
+        </div>
+        <div id="chart-roc-container" class="chart-container" style="height: 420px;"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Application Logic Scripts -->
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
